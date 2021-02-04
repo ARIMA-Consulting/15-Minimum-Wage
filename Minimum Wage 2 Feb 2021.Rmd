@@ -1,0 +1,108 @@
+---
+title: "Minimum Wage Part 2"
+author: "Tyler Harris"
+date: "2/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load libraries
+library(readxl)
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+# Load data
+Minimum_Wage_Master <- read_excel("Minimum Wage Master.xlsx")
+```
+
+```{r}
+# Clean up
+Minimum_Wage_Master$Date <- ymd(Minimum_Wage_Master$Date)
+Minimum_Wage_Master$President_Party <- as.factor(Minimum_Wage_Master$President_Party)
+```
+
+```{r}
+# Nominal and Real adjusted for December 2020 dollars
+ggplot(data = Minimum_Wage_Master) +
+  geom_line(aes(x = Date, y = Min_Wage_Nominal), color = "steelblue") +
+  geom_line(aes(x = Date, y = Min_Wage_Dec_2020_Dollars_CPI), color = "darkred") +
+  ggtitle("Nominal vs Real Minimum Wage", subtitle = "December 2020 US Dollars \n\n Blue = Nominal  Red = Real") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(plot.subtitle = element_text(hjust = 0.5)) + 
+  labs(caption = "Sources: US Bureau of Labor Statistics, Federal Reserve Bank of St. Louis (FRED) [CPIAUCSL] | US Dept. of Labor") +
+  xlab("Date") +
+  ylab("US Dollars") +
+  geom_hline(yintercept = 7.25, linetype = 'dotted') +
+  scale_x_date(date_breaks = "2 year", date_labels = "%Y") +
+  theme(axis.text.x=element_text(angle=90, hjust=1)) +
+  scale_y_continuous(breaks = 1:15)
+
+```
+
+```{r}
+# Nominal and Real adjusted for December 2020 dollars
+ggplot(data = Minimum_Wage_Master) +
+  geom_line(aes(x = Date, y = U3_Rate), color = "darkgreen") +
+  geom_line(aes(x = Date, y = Min_Wage_Nominal), color = "steelblue") +
+  geom_line(aes(x = Date, y = Min_Wage_Dec_2020_Dollars_CPI), color = "darkred") +
+  ggtitle("Nominal vs Real Minimum Wage with U-3 Unemployment", subtitle = "December 2020 US Dollars \n\n Blue = Nominal  Red = Real  Green = U-3") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(plot.subtitle = element_text(hjust = 0.5)) + 
+  labs(caption = "Sources: US Bureau of Labor Statistics, Federal Reserve Bank of St. Louis (FRED) | US Dept. of Labor") +
+  xlab("Date") +
+  ylab("US Dollars") +
+  geom_hline(yintercept = 7.25, linetype = 'dotted') +
+  scale_x_date(date_breaks = "2 year", date_labels = "%Y") +
+  theme(axis.text.x=element_text(angle=90, hjust=1)) +
+  scale_y_continuous(sec.axis = sec_axis(~.*1, breaks = 1:15, name = "Unemployment Rate (U-3)"))
+```
+
+```{r}
+# lm of unemployment and min wage
+fit1 <- lm(U3_Rate ~ Min_Wage_Nominal + Min_Wage_Dec_2020_Dollars_CPI, data = Minimum_Wage_Master)
+summary(fit1)
+```
+
+```{r}
+# Correlation of unemployment and nominal min wage
+cor.test(Minimum_Wage_Master$U3_Rate, Minimum_Wage_Master$Min_Wage_Nominal, method = "pearson")
+```
+
+```{r}
+# Correlation of unemployment and real min wage
+cor.test(Minimum_Wage_Master$U3_Rate, Minimum_Wage_Master$Min_Wage_Dec_2020_Dollars_CPI, method = "pearson")
+```
+
+```{r}
+# Nominal Min Wage by President
+Minimum_Wage_Master %>%
+  group_by(President_Party) %>%
+  summarise(mean = mean(Min_Wage_Nominal), median = median(Min_Wage_Nominal))
+```
+
+```{r}
+# Real Min Wage by President
+Minimum_Wage_Master %>%
+  group_by(President_Party) %>%
+  summarise(mean = mean(Min_Wage_Dec_2020_Dollars_CPI), median = median(Min_Wage_Dec_2020_Dollars_CPI))
+```
+
+```{r}
+# Both houses under same party control
+Minimum_Wage_Master %>%
+  group_by(House_Party == Senate_Party) %>%
+  summarise(mean = mean(Min_Wage_Dec_2020_Dollars_CPI), median = median(Min_Wage_Dec_2020_Dollars_CPI))
+```
+
+```{r}
+# Both houses under same party control
+Minimum_Wage_Master %>%
+  group_by(House_Party = Senate_Party == President_Party) %>%
+  summarise(mean = mean(Min_Wage_Dec_2020_Dollars_CPI), median = median(Min_Wage_Dec_2020_Dollars_CPI))
+```
